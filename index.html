@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIQE 卷一 模擬考試系統 (全新隨機 75 題)</title>
+    <style>
+        body { font-family: "Times New Roman", "微軟正黑體", serif; background-color: #f4f6f8; margin: 0; padding: 0; color: #333; }
+        .header { 
+            background: #2c3e50; color: white; padding: 15px; text-align: center; 
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3); 
+        }
+        .stats-bar { display: flex; justify-content: center; gap: 30px; font-size: 1.1em; }
+        .stat-item { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; }
+        #score-display { display: none; color: #2ecc71; font-weight: bold; }
+        .container { max-width: 850px; margin: 20px auto; background: white; padding: 40px; border-radius: 4px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .chapter-title { background: #f8f9fa; padding: 12px; font-weight: bold; border-left: 6px solid #3498db; margin: 40px 0 20px 0; font-size: 1.3em; color: #2c3e50; }
+        .question-block { margin-bottom: 40px; padding: 20px; border-radius: 8px; border: 1px solid transparent; transition: 0.3s; }
+        .question-text { font-size: 1.1em; line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px; }
+        .options-container { display: flex; flex-direction: column; gap: 10px; }
+        .option-item { 
+            padding: 12px 18px; border: 1px solid #dcdde1; border-radius: 6px; 
+            cursor: pointer; display: flex; align-items: flex-start; background: #fff; transition: all 0.2s; 
+        }
+        .option-item:hover { background-color: #f1f2f6; }
+        .option-item.selected { border-color: #3498db; background-color: #e1f5fe; }
+        .submitted .option-item.correct-ans { border-color: #27ae60 !important; background-color: #e9f7ef !important; color: #155724; font-weight: bold; }
+        .submitted .option-item.wrong-choice { border-color: #e74c3c !important; background-color: #fdedec !important; color: #721c24; }
+        .option-prefix { font-weight: bold; margin-right: 12px; min-width: 30px; }
+        .status-icon { margin-left: auto; font-size: 1.3em; font-weight: bold; }
+        .btn-submit { display: block; width: 100%; padding: 20px; background: #3498db; color: white; border: none; font-size: 1.3em; cursor: pointer; margin-top: 50px; border-radius: 6px; font-weight: bold; }
+        .btn-submit:hover { background: #2980b9; }
+        #result-summary { display: none; margin-top: 30px; padding: 20px; border: 2px solid #27ae60; border-radius: 8px; background: #fafffb; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="stats-bar">
+        <div class="stat-item">已完成: <span id="progress-count">0</span> / 75</div>
+        <div class="stat-item" id="score-display">答對分數: <span id="correct-score">0</span> ( <span id="score-percent">0</span>% )</div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="quiz-content"></div>
+    <div id="result-summary">
+        <h2 id="result-text">尚未提交試卷</h2>
+    </div>
+    <button class="btn-submit" onclick="gradeQuiz()">提交試卷並計算分數</button>
+</div>
+
+<script>
+    const quizData = [
+        // 第一章 (9題)
+        { ch: 1, id: 2, q: "2 在保險中，「風險」的定義是：", o: ["(a) 保險人有可能變成資不抵債的危險性", "(b) 潛在利益有關的不確定性", "(c) 對可能發生的風險有保護措施", "(d) 潛在損失有關的不確定性"], a: 3 },
+        { ch: 1, id: 11, q: "11 「一項潛在損失的不確定性」，這項定義最能恰當地描述：", o: ["(a) 風險", "(b) 一種可能出現的損失或收益", "(c) 那些可保的風險而已", "(d) 任何預期之外的事件，不論結果怎樣"], a: 0 },
+        { ch: 1, id: 15, q: "15 描述保險及風險的關係，以下哪項是正確的：", o: ["(a) 並非所有風險都屬於商業上可保的", "(b) 保險是抗衡風險的唯一挽救方法", "(c) 所有風險在商業上都是可保的", "(d) 以上各項皆是"], a: 0 },
+        { ch: 1, id: 30, q: "30 商業保險人所保的風險主要是：", o: ["(a) 特定風險及基本風險", "(b) 純粹風險及基本風險", "(c) 純粹風險及特定風險", "(d) 純粹風險及投機風險"], a: 2 },
+        { ch: 1, id: 33, q: "33 以下有關基本風險的敘述，哪一項是正確的？", o: ["(a) 基本只會有損失而無收益", "(b) 通常範圍不廣泛", "(c) 個人性而非社會性", "(d) 相當可能不受保"], a: 3 },
+        { ch: 1, id: 38, q: "38 從可保程度的角度來看，純粹風險屬於：", o: ["(a) 永不可保的", "(b) 必然可保的", "(c) 可保程度可能低於投機風險", "(d) 可保程度可能高於投機風險"], a: 3 },
+        { ch: 1, id: 53, q: "53 如果根據風險所帶來的影響區別，風險可以分為：", o: ["(a) 純粹風險及投機風險", "(b) 可保風險及不可保風險", "(c) 投機風險及特定風險", "(d) 特定風險及基本風險"], a: 3 },
+        { ch: 1, id: 64, q: "64 從可保程度的角度來看，哪項是用來形容特定風險的？", o: ["(a) 永不可保的", "(b) 必然可保的", "(c) 可保程度較可能低於基本風險", "(d) 可保程度較可能高於基本風險"], a: 3 },
+        { ch: 1, id: 79, q: "79 很多時候，保險人在談論“風險管理”，管理可能涉及到：", o: ["(a) 公司要求承保或被要求承保的風險", "(b) 危險風險", "(c) 投資及其他投機風險", "(d) 公司內主管核保部門的行政人員"], a: 0 },
+
+        // 第二章 (12題)
+        { ch: 2, id: 1, q: "1 保險代理人安排一份保險合約時，涉及以下哪項或哪些法律範圍？\n\n(a) 合約法\n(b) 代理法\n(c) 《保險業條例》的條文\n(d) 以上所有各項", o: ["(a)", "(b)", "(c)", "(d)"], a: 3 },
+        { ch: 2, id: 2, q: "2 以下那項關於一份法律開支保險合約的描述是不正確的？", o: ["(a) 不是所有協議都具有法律效力", "(b) 必須是經蓋章的", "(c) 是一份可強制執行的協議", "(d) 嚴格來說，合約是無形的"], a: 1 },
+        { ch: 2, id: 5, q: "5 合約可以定義為：", o: ["(a) 具有法律效力的協議", "(b) 兩人或多人之間的承諾", "(c) 書面協議", "(d) 兩方或多方之間的任何協議"], a: 0 },
+        { ch: 2, id: 36, q: "36 一份合約由於一些要求還未完成而令致有關合約無法執行，此稱為：", o: ["(a) 可使無效的合約", "(b) 不能強制執行的合約", "(c) 無效的合約", "(d) 不合法的合約"], a: 1 },
+        { ch: 2, id: 43, q: "43 以下哪項顯示出有關人士並無訂約的行為能力？", o: ["(a) 沒有交保費能力", "(b) 沒有做生意能力", "(c) 沒有續保能力", "(d) 沒有訂立合約的法律能力"], a: 3 },
+        { ch: 2, id: 50, q: "50 以下哪項有關保單的要約描述是正確的？", o: ["(a) 保險合約的要約法與其他合約的要約法略有不同", "(b) 沒有要約法就沒有合約", "(c) 人壽保險的合約的要約法比非人壽保險合約的要約法略有不同", "(d) 人壽保險的合約的要約法的要求略高於非人壽保險合約的要約"], a: 1 },
+        { ch: 2, id: 58, q: "58 蘇先生在電話要求一份機器全險保障，保險人承諾在一星期後發出保單。電話對話一小時後，該組機器在火災中被毀。請問有否一份有效的機器全險合約保障？", o: ["(a) 沒有，因未曾出現承諾", "(b) 沒有，因保單未發出", "(c) 有，因保障在承諾一刻生效", "(d) 有，追溯性保單保障機器損失"], a: 2 },
+        { ch: 2, id: 70, q: "70 以下哪類人士在訂約的行為能力方面可能會受到限制？", o: ["(a) 精神錯亂", "(b) 未滿十八歲", "(c) 破產人士", "(d) 以上所有各項"], a: 3 },
+        { ch: 2, id: 107, q: "107 雖然在行動時並未獲授權，但只要委託人事後確認該行動，就如同給予一種追溯性的授權。此種情況下產生之代理關係稱為：", o: ["(a) 通過協議", "(b) 明示協議", "(c) 追認", "(d) 隱含授權"], a: 2 },
+        { ch: 2, id: 116, q: "116 根據代理法：", o: ["(a) 保險代理人及保險經紀兩者都屬於「代理人」", "(b) 保險代理人及保險經紀兩者都不屬於「代理人」", "(c) 保險代理人屬於「代理人」，但保險經紀則不是", "(d) 保險經紀屬於「代理人」，但保險代理人則不是"], a: 0 },
+        { ch: 2, id: 141, q: "141 代理人必須毫無保留地或盡量最大可能服從及履行：", o: ["(a) 本身委託人的一切指示", "(b) 本身委託人的一切合法指示", "(c) 自己喜歡執行的指示而已", "(d) 本身委託人以書面方式提供的指示而已"], a: 1 },
+        { ch: 2, id: 163, q: "163 假如一方為法人團體的公司，它一旦清盤，協議將會：", o: ["(a) 立即終止", "(b) 自動傳予清盤人購買", "(c) 自動傳予董事局購買", "(d) 自動傳予股東購買"], a: 0 },
+
+        // 第三章 (23題)
+        { ch: 3, id: 1, q: "1 可保權益及最高誠信適用於下列哪項合約？", o: ["(a) 一般保險合約而已", "(b) 長期保險合約而已", "(c) 所有保險合約", "(d) 不適用於任何保險合約"], a: 2 },
+        { ch: 3, id: 3, q: "3 與保險標的有法律認可關係，這描述屬於哪項原則？", o: ["(a) 彌償", "(b) 近因", "(c) 可保權益", "(d) 可保權利"], a: 2 },
+        { ch: 3, id: 11, q: "11 以下哪項沒有可保權益？", o: ["(a) 教堂建築物的受託人對教堂購買保險", "(b) 盜賊對偷來的財物購買保險", "(c) 承按人對抵押給他的財產購買保險", "(d) 遺囑執行人對死者的財產"], a: 1 },
+        { ch: 3, id: 16, q: "16 以下哪項不符合可保權益所要求的條件？", o: ["(a) 對保險標的必須存在一種法律認可的關係", "(b) 有可受保的東西", "(c) 有關保險標的必須屬於法律責任", "(d) 該東西為有關保險標的"], a: 2 },
+        { ch: 3, id: 19, q: "19 以下哪三項一般被視為可保權益的要素？\n\ni) 一些可以受保的東西\nii) 與保險標的的法律認可關係\niii) 以該東西作為保險標的\niv) 保險標的必須為實質物體(例如：建築物)", o: ["(a) i，ii，iii", "(b) i，ii，iv", "(c) i，iii，iv", "(d) ii，iii，iv"], a: 0 },
+        { ch: 3, id: 27, q: "27 在香港，每一名人士對以下哪項人士的生命不具有可保權益？", o: ["(a) 個人的本身", "(b) 個人的配偶", "(c) 個人的兄弟及父母", "(d) 個人十八歲以下的子女或受監護人"], a: 2 },
+        { ch: 3, id: 33, q: "33 於所有保險合約中，被保險人必需在投保時對標的物有可保權益，以下哪項保險項目在索償時需要有可保權益？\n\ni) 任何型式的責任保險\nii) 車險\niii) 人壽保險\niv) 船上的貨物保險", o: ["(a) i，ii，iii", "(b) i，iii，iv", "(c) i，ii，iv", "(d) i，ii，iii，iv"], a: 2 },
+        { ch: 3, id: 38, q: "38 下列哪項關係構成可保權益？\n\ni) 自己與太太的財產\nii) 遺囑執行人與所保管的財產\niii) 信託人與所保管的財產\niv) 與被保險人一起居住的家人所擁有的財產", o: ["(a) i，ii，iii", "(b) i，ii，iv", "(c) i，iii，iv", "(d) i，ii，iii，iv"], a: 3 },
+        { ch: 3, id: 54, q: "54 以下哪項或哪些情況出現之損失或索償，在沒有構成可保權益下，都不會形成拒絕損失索償的理由：", o: ["(a) 人壽保險(被保險人為前配偶，現已離婚)", "(b) 火險，由「前承按人」購買(欠款已於火災前清還)", "(c) 車險(汽車於意外摧毀前己買出)", "(d) 以上各項"], a: 0 },
+        { ch: 3, id: 59, q: "59 在實際情況下，除人壽保險外，下列哪類保險在索償時才需要證明可保權益？", o: ["(a) 必然出現於損失發生時", "(b) 只出現於保險安排妥當時", "(c) 只出現於繳交首次保費的時候", "(d) 只限於保單上有清晰描述時才需要"], a: 0 },
+        { ch: 3, id: 65, q: "65 以下哪項對轉讓的陳述是正確的？\n\ni) 人壽保險可以不經保險人同意自由轉讓\nii) 海上貨物保險可以不經保險人同意自由轉讓\niii) 商業「全險」保單不可以沒有保險人同意便轉讓\niv) 人壽保險不可以沒有保險人同意便轉讓", o: ["(a) i，ii，iii", "(b) i，ii，iv", "(c) i，iii，iv", "(d) ii，iii，iv"], a: 0 },
+        { ch: 3, id: 75, q: "75 以下哪項不屬於對「最高誠信」的不正確描述？", o: ["(a) 在一般保險中，通常會降低「最高誠信」的責任", "(b) 「最高誠信」只適用於保單條款中所訂明的事項", "(c) 「最高誠信」只涉及所提問的須以誠實態度回答", "(d) 以上各項皆不正確"], a: 3 },
+        { ch: 3, id: 84, q: "84 保險合約的契約各方______：", o: ["(a) 必須披露所有已知的重要事實", "(b) 無需披露所有已知的重要事實", "(c) 確保將要提供給對方的資料在實質上真實", "(d) 確保合約另一方披露所有重要事實，無論保單上是否有相關的問題"], a: 3 },
+        { ch: 3, id: 101, q: "101 一個足以影響一名審慎的保險人決定是否承保可能面對的風險，或釐定承保條件的事實，可稱為：", o: ["(a) 非重要事實", "(b) 重要事實", "(c) 代位權", "(d) 最高誠信"], a: 1 },
+        { ch: 3, id: 110, q: "110 根據普通法，投保人需要遵守最高誠信責任的期限：", o: ["(a) 直至索償為止", "(b) 直至該合約生效為止", "(c) 涉及整段合約生效時", "(d) 僅至簽署投保書時為止"], a: 1 },
+        { ch: 3, id: 130, q: "130 如果投保人違反了最高誠信：", o: ["(a) 只要牽涉詐騙的情況下，保險人可得到補救", "(b) 保險人可以從起保日開始推翻有關合約", "(c) 詐騙或疏忽的情況下，保險人可得到補救", "(d) 該份保單會自動失效"], a: 1 },
+        { ch: 3, id: 144, q: "144 一種理解為「一項對損失最顯著及最具效力的理由」的保險原則為：", o: ["(a) 近因", "(b) 分擔", "(c) 最高誠信", "(d) 可保權益"], a: 0 },
+        { ch: 3, id: 150, q: "150 就提供非全險形式的財產保險，既未被保單具體地承保或具體地豁免承保的損失原因屬於：", o: ["(a) 受保危險", "(b) 不保危險", "(c) 除外危險", "(d) 非除外危險"], a: 1 },
+        { ch: 3, id: 167, q: "167 根據近因的一般原則，當雷電導致火警的話，以下哪類的損毀可按商業火險得到保障？\n\ni) 電極造成的損毀\nii) 有關火警對建築物造成的損毀\niii) 濃煙對存貨造成的損毀，然而未有被火燒毀\niv) 因嘗試以水救火而對建築物造成的損毀", o: ["(a) i，ii", "(b) i，iii", "(c) ii，iii，iv", "(d) i，ii，iii，iv"], a: 3 },
+        { ch: 3, id: 183, q: "183 如果一份保單承諾依據保單條款及條件向被保險人提供「彌償」，這意味著：", o: ["(a) 任何理賠給付均只能以現金方式進行", "(b) 該份保單必須代表一份人壽保險合約", "(c) 針對特定損失，該保險人只會給付己聲明的利益", "(d) 保險人打算對損失提供一項精確的補償"], a: 3 },
+        { ch: 3, id: 212, q: "212 一份恰當地安排的財產保險，於被保險的全損出現時，應可提供完全的補償。這項補償代表該名被保險人在有關財產上的權益，顯示彌償與以下哪一項的原則相連？", o: ["(a) 近因", "(b) 可保權益", "(c) 最高誠信", "(d) 以上所有各項"], a: 1 },
+        { ch: 3, id: 232, q: "232 假設保單免賠額是X，下列哪項有關的陳述是正確的？", o: ["(a) 被保險人的首X損失將不獲保障", "(b) 索償時會獲得最高X的賠償", "(c) 索償超越X時，將獲全數賠償", "(d) 被保險人需付額外X保費"], a: 0 },
+        { ch: 3, id: 307, q: "307 在代位的補償上，如何處置因向第三者索取的多餘款項?", o: ["(a) 屬於被保險人", "(b) 屬於保險人", "(c) 運用比例分攤", "(d) 由保險人及被保險人平均分享有"], a: 0 },
+
+        // 第四章 (7題)
+        { ch: 4, id: 2, q: "2 產品開發是保險公司的重要功能，原因是：", o: ["(a) 產品開發有助於確保公司的財務穩定", "(b) 由於信息技術出現，保險產品很快就過時了", "(c) 保險公司必須根據不斷變化的法規要求對強制性保險單進行頻繁的修訂", "(d) 新產品往往被競爭對手完全複製，因保險產品並沒擁有知識產權"], a: 3 },
+        { ch: 4, id: 13, q: "13 以下哪項或哪些就會計及投資部對其投資組合須特別留意？", o: ["(a) 安全性", "(b) 流動性", "(c) 收益性", "(d) 以上所有各項"], a: 3 },
+        { ch: 4, id: 23, q: "23 客戶服務是保險公司的主要功能，建立公司形象屬於哪種職責範圍?", o: ["(a) 聯絡", "(b) 公共關係", "(c) 文件的提供", "(d) 投訴"], a: 1 },
+        { ch: 4, id: 36, q: "36 下列哪一個部門與銷售部門關係最為密切？", o: ["(a) 市場推廣", "(b) 核保", "(c) 保單服務", "(d) 精算"], a: 0 },
+        { ch: 4, id: 43, q: "43 壽險保單核保工作很重要，以下哪項原因是正確的：", o: ["(a) 保險標的是人類", "(b) 保險人不能單方取消保單", "(c) 壽險保單的保額通常巨大", "(d) 壽險保單牽涉的佣金較大"], a: 1 },
+        { ch: 4, id: 73, q: "73 以下哪一項商業保險的理賠工作以非集中形式進行的可能性最小：", o: ["(a) 人壽保險", "(b) 旅遊保險", "(c) 汽車保險", "(d) 家居保險"], a: 0 },
+        { ch: 4, id: 85, q: "85 保險業條例要求所有從事長期業務的保險人，委派一名合資格的精算師，並要求：", o: ["(a) 每年呈交一份屬於該保險人的獨立死亡率報告", "(b) 對該保險人的所有資產及負債進行最少一年一次的評估", "(c) 每年呈交一份索償報告", "(d) 以上所列各項要求均要達致"], a: 1 },
+
+        // 第五章 (4題)
+        { ch: 5, id: 1, q: "1 保險業務種類可分為法定的、實務的及學術的，然而法定的是為著什麼而設立：", o: ["(a) 為公司內部組織而設", "(b) 為專業進修而設", "(c) 為保險業監管機構授權及監察而設", "(d) 以上各項皆是"], a: 2 },
+        { ch: 5, id: 19, q: "19 根據英國部門式分類的制度，主要分為四大類(意外險、火險、壽險及海上保險)。美國制度下，則分為兩大類，包括人壽和非人壽。後者亦經常進一步劃分為：", o: ["(a) 財產及非財產", "(b) 火險及其他", "(c) 海上保險，火險，保證及意外險", "(d) 汽車及責任"], a: 2 },
+        { ch: 5, id: 41, q: "41 哪個歷史悠久的團體是保險人的代表？", o: ["(a) 香港保險業聯會", "(b) 香港保險學會", "(c) 保險業監管局", "(d) 香港保險顧問聯會"], a: 0 },
+        { ch: 5, id: 53, q: "53 保監局於2019年從3個自律規管機構接管了:", o: ["(a) 保險監理處的功能", "(b) 保險人的監管", "(c) 保險中介人的規管", "(d) 香港保險監督聯會的功能"], a: 2 },
+
+        // 第六章 (15題)
+        { ch: 6, id: 1, q: "1 立法會已制定什麼法例，改革保險業的規管制度？", o: ["(a) 2015年保險公司（修訂）條例", "(b) 2015年保險業監管局條例", "(c) 2015年保險從業員條例", "(d) 2015年保險業（修訂）條例"], a: 0 },
+        { ch: 6, id: 11, q: "11 以下哪一項是保險業監管局根據《保險公司條例》在《2015年修訂條例》新增的任務及職能？", o: ["(a) 透過發牌制度，規管保險中介人的操守", "(b) 促進保險業市場的高速發展", "(c) 直接保障保單持有人和潛在保單持有人的利益", "(d) 擴大監管至每天跟客戶聯繫的保險從業員"], a: 0 },
+        { ch: 6, id: 16, q: "16 以下哪些新增的監管權力是保險業監管局就《2015年保險公司（修訂) 條例》所授予，對獲授權保險人施予的紀律處分？\n\ni) 公開譴責\nii) 對新業務的限制\niii) 罰款\niv) 限制保費收入", o: ["(a) i，ii", "(b) i，ii，iii", "(c) i，iii", "(d) ii，iii，iv"], a: 2 },
+        { ch: 6, id: 27, q: "27 保險業監管局發出了《獲授權保險人的公司管治指引》旨在：", o: ["(a) 加強投保人的信心和促進香港保險市場的穩健和長遠發展", "(b) 防止獲授權保險人的高級管理人員作出欺詐行為", "(c) 防止獲授權保險人的高級管理人員作出欺詐行為，及行政出錯", "(d) 確保獲授權保險人的董事局優先考慮保單持有人的利益"], a: 0 },
+        { ch: 6, id: 35, q: "35 《獲授權保險人的公司管治指引》（《公司管治指引》）之内容涵蓋範圍：", o: ["(a) 風險管理及承保", "(b) 各級管理與2項職能（風險管理和承保）", "(c) 各級管理與3項職能（風險管理，承保和理賠）", "(d) 所有職能，包括風險管理和顧客服務"], a: 2 },
+        { ch: 6, id: 50, q: "50 以下哪一項是《2015年修訂條例》賦予保監局新增的規管權力？", o: ["(a) 向獲授權保險人施加紀律處分", "(b) 要求保險人委任審計師作特定的精算調查", "(c) 要求任何保險人委任審計師作特定的精算調查", "(d) 對不合要求的獲授權保險人進行查察、展開調查及施加紀律處分"], a: 3 },
+        { ch: 6, id: 69, q: "69 由保險業聯會執行的《承保商專業守則》適用於：", o: ["(a) 保險業聯會會員所發出之保單", "(b) 保險業聯會會員所發出之商業保單", "(c) 以香港居民個人作保單持有人的保單", "(d) 以非香港居民個人作保單持有人的保單"], a: 2 },
+        { ch: 6, id: 86, q: "86 以下哪項是保險投訴局的描述是正確的？\n\ni) 會員是在香港從事個人保險業務的獲授權保險人\nii) 投訴委員會是由一位主席、四位委員組成\niii) 涉及的投訴個案保單須屬個人保單\niv) 保險投訴局會代為處理理賠及索償", o: ["(a) i，ii，iii", "(b) i，ii，iv", "(c) iii，iv", "(d) i，ii，iii，iv"], a: 0 },
+        { ch: 6, id: 92, q: "92 保險投訴局成立的基本目的之一是：", o: ["(a) 處理與保險人的服務水準有關的投訴", "(b) 處理來自第三者的法定保險索償", "(c) 處理香港個人持有的保單相關索償投訴", "(d) 代表成員處理及給付理賠"], a: 2 },
+        { ch: 6, id: 114, q: "114 保險人與保單持有人發生爭議，保險合約可能包含仲裁條款，保單持有人可向保險投訴局尋求調解服務，保險投訴局解釋以下哪項條件先需要滿足？\n\ni) 爭議屬索償無關的投訴個案\nii) 爭議賠償金額為80萬港元以下\niii) 未能滿足保險投訴局的裁決條件\niv) 涉案保險人已對爭議作出了最終決定", o: ["(a) i，ii，iii", "(b) ii，iii，iv", "(c) iii，iv", "(d) i，iv"], a: 3 },
+        { ch: 6, id: 122, q: "122 根據法定規定，以下哪些需要至少一名負責人？\n\n(i) 持牌保險機構\n(ii) 持牌保險代理\n(iii) 持牌保險代理機構\n(iv) 持牌保險經紀公司", o: ["(a) I，ii", "(b) I，iii", "(c) ii，iv", "(d) iii，iv"], a: 3 },
+        { ch: 6, id: 135, q: "135 誰是持牌個人保險代理的主事人？", o: ["(a) 客戶", "(b) 客戶的僱主", "(c) 該保險代理的經理", "(d) 該保險代理的委任保險人"], a: 3 },
+        { ch: 6, id: 149, q: "149 負責人須最少具有多少年保險業管理經驗？", o: ["(a) 2年", "(b) 5年", "(c) 10年", "(d) 15年"], a: 0 },
+        { ch: 6, id: 161, q: "161 持牌保險經紀應遵守適用於該經紀的法律，此項目屬於守則的：", o: ["(a) 合規", "(b) 防止賄賂", "(c) 以謹慎、技巧和努力行事", "(d) 勝任"], a: 0 },
+        { ch: 6, id: 180, q: "180 保險經紀所須備有的專業彌償保險的最低彌償限額多樣化,但不會低於：", o: ["(a) 1百萬", "(b) 2百萬", "(c) 3百萬", "(d) 4百萬"], a: 2 },
+
+        // 第七章 (5題)
+        { ch: 7, id: 1, q: "1 當壽險代理執行業務時，必須：\n\ni) 對銷售者提供的資料保密\nii) 清楚解釋各保單比較的具體分別\niii) 提供保險事務意見時，只限於能力範圍之內\niv) 不可在保費以下附加任何收費", o: ["(a) i", "(b) i，ii", "(c) i，iii，iii", "(d) 以上皆是"], a: 3 },
+        { ch: 7, id: 15, q: "15 根據《個人資料（私隱）條例》保障資料第1原則，若資料使用者收集個人資料時：", o: ["(a) 個人資料應是準確的，最新的，其保留期限不應超過所需時間", "(b) 合法和公平地收集個人資料", "(c) 資料使用者須採取合約規範方法或其他方法，以防止轉移予該資料處理者的個人資料的保存時間超過處理該資料所需的時間", "(d) 資料使用者須採取合約規範方法或其他方法，以防止轉移予該資料處理者的個人資料的保存時間超過30天"], a: 1 },
+        { ch: 7, id: 41, q: "41 成立平等機會委員會的目的，除了負責消除殘疾歧視、婚姻狀況外，還有下列哪一種？", o: ["(a) 性別", "(b) 年齡", "(c) 膚色", "(d) 以上各項"], a: 0 },
+        { ch: 7, id: 61, q: "61 打擊洗錢的條例包括：", o: ["(a) 《香港（反恐怖主義措施）條例》", "(b) 《聯合國（反恐怖主義措施）條例》", "(c) 《聯合國（反洗錢）條例》", "(d) 以上各項皆正確"], a: 1 },
+        { ch: 7, id: 95, q: "95 保險中介人挪用了代保險人收取的保費後，會被控以下哪項罪名？", o: ["(a) 挪用金錢罪", "(b) 盜竊罪", "(c) 不誠實罪", "(d) 故意偷竊罪"], a: 1 }
+    ];
+
+    const userChoices = new Array(quizData.length).fill(null);
+
+    function initQuiz() {
+        const container = document.getElementById('quiz-content');
+        let currentCh = 0;
+        quizData.forEach((item, index) => {
+            if (item.ch !== currentCh) {
+                currentCh = item.ch;
+                const chDiv = document.createElement('div');
+                chDiv.className = 'chapter-title';
+                chDiv.innerText = `第${['零','一','二','三','四','五','六','七'][currentCh]}章`;
+                container.appendChild(chDiv);
+            }
+            const qBlock = document.createElement('div');
+            qBlock.className = 'question-block';
+            qBlock.id = `q-block-${index}`;
+            const qText = document.createElement('div');
+            qText.className = 'question-text';
+            qText.innerText = item.q;
+            qBlock.appendChild(qText);
+            const optContainer = document.createElement('div');
+            optContainer.className = 'options-container';
+            item.o.forEach((optText, optIndex) => {
+                const optItem = document.createElement('div');
+                optItem.className = 'option-item';
+                optItem.id = `q${index}-opt${optIndex}`;
+                optItem.onclick = () => selectOption(index, optIndex);
+                const prefix = document.createElement('span');
+                prefix.className = 'option-prefix';
+                prefix.innerText = ``; // 原格式 label 已在 optText
+                const text = document.createElement('span');
+                text.innerText = optText;
+                optItem.appendChild(prefix);
+                optItem.appendChild(text);
+                optContainer.appendChild(optItem);
+            });
+            qBlock.appendChild(optContainer);
+            container.appendChild(qBlock);
+        });
+    }
+
+    function selectOption(qIdx, optIdx) {
+        userChoices[qIdx] = optIdx;
+        for(let i=0; i<4; i++) {
+            const el = document.getElementById(`q${qIdx}-opt${i}`);
+            if(el) el.classList.remove('selected');
+        }
+        document.getElementById(`q${qIdx}-opt${optIdx}`).classList.add('selected');
+        const answeredCount = userChoices.filter(c => c !== null).length;
+        document.getElementById('progress-count').innerText = answeredCount;
+    }
+
+    function gradeQuiz() {
+        let score = 0;
+        document.body.classList.add('submitted');
+        document.getElementById('score-display').style.display = 'block';
+        quizData.forEach((item, index) => {
+            const userChoice = userChoices[index];
+            const correctChoice = item.a;
+            const items = document.querySelectorAll(`#q-block-${index} .option-item`);
+            items.forEach(el => {
+                const icon = el.querySelector('.status-icon');
+                if(icon) icon.remove();
+                el.classList.remove('correct-ans', 'wrong-choice');
+            });
+            const correctEl = document.getElementById(`q${index}-opt${correctChoice}`);
+            correctEl.classList.add('correct-ans');
+            if (userChoice === correctChoice) {
+                score++;
+                correctEl.innerHTML += '<span class="status-icon">✓</span>';
+            } else if (userChoice !== null) {
+                const wrongEl = document.getElementById(`q${index}-opt${userChoice}`);
+                wrongEl.classList.add('wrong-choice');
+                wrongEl.innerHTML += '<span class="status-icon">✗</span>';
+                correctEl.innerHTML += '<span class="status-icon">(正確答案)</span>';
+            } else {
+                correctEl.innerHTML += '<span class="status-icon">(未作答)</span>';
+            }
+        });
+        document.getElementById('correct-score').innerText = score;
+        const percent = Math.round((score / 75) * 100);
+        document.getElementById('score-percent').innerText = percent;
+        const summary = document.getElementById('result-summary');
+        summary.style.display = 'block';
+        document.getElementById('result-text').innerText = `考試完畢！您的分數是: ${score} / 75 (${percent}%)。`;
+        window.scrollTo(0, 0);
+        alert(`完成！得分：${score} / 75`);
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
